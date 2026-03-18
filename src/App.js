@@ -1,75 +1,85 @@
 import { useState } from "react";
 
 function App() {
-  const [sub, setSub] = useState("");
+  const [subreddit, setSubreddit] = useState("");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
 
-  const analyze = async () => {
-    if(!sub) return;
+  const loadPosts = async () => {
+    if (!subreddit.trim()) return;
+
     setLoading(true);
-    setError(null);
+    setError("");
     setData(null);
 
     try {
-      const res = await fetch(`http://localhost:5000/analyze/${sub}`);
-      if(!res.ok) throw new Error("Failed to fetch subreddit data");
+      const res = await fetch(`http://localhost:5050/api/posts/${subreddit}`);
+
+      if (!res.ok) {
+        throw new Error("Failed to load posts");
+      }
+
       const json = await res.json();
       setData(json);
-    } catch(err) {
-      setError(err.message);
+    } catch (err) {
       console.error(err);
+      setError(err.message);
     }
 
     setLoading(false);
   };
 
   return (
-    <div style={{ padding: 30, fontFamily: "Arial" }}>
-      <h1>Reddit Sentiment Dashboard</h1>
+    <div style={{ padding: "30px", fontFamily: "Arial" }}>
+      <h1>Reddit Posts Viewer</h1>
 
-      <input
-        placeholder="Enter subreddit"
-        value={sub}
-        onChange={(e) => setSub(e.target.value)}
-        style={{ padding: 5, marginRight: 10 }}
-      />
-      <button onClick={analyze} style={{ padding: 5 }}>Analyze</button>
+      <div style={{ marginBottom: "20px" }}>
+        <input
+          type="text"
+          placeholder="Enter subreddit, for example hamburg"
+          value={subreddit}
+          onChange={(e) => setSubreddit(e.target.value)}
+          style={{ padding: "8px", width: "260px", marginRight: "10px" }}
+        />
+        <button onClick={loadPosts} style={{ padding: "8px 14px" }}>
+          Load posts
+        </button>
+      </div>
 
       {loading && <p>Loading...</p>}
       {error && <p style={{ color: "red" }}>{error}</p>}
 
       {data && (
         <div>
-          <h2>Statistics</h2>
-          <p>Total comments: {data.totalComments}</p>
-          <p>Top word: {data.topWord}</p>
+          <h2>r/{data.subreddit}</h2>
+          <p>Posts found: {data.count}</p>
 
-          <h3>Sentiment Analysis</h3>
-          <p>Positive: {data.sentiments.positive}</p>
-          <p>Neutral: {data.sentiments.neutral}</p>
-          <p>Negative: {data.sentiments.negative}</p>
-
-          <h2>Top Posts</h2>
-          <table border="1" cellPadding="5" style={{ borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Comments</th>
-                <th>Score</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.posts.map((p, i) => (
-                <tr key={i}>
-                  <td>{p.title}</td>
-                  <td>{p.comments}</td>
-                  <td>{p.score}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {data.posts.map((post) => (
+            <div
+              key={post.id}
+              style={{
+                border: "1px solid #ddd",
+                borderRadius: "8px",
+                padding: "15px",
+                marginBottom: "12px"
+              }}
+            >
+              <h3 style={{ marginTop: 0 }}>{post.title}</h3>
+              <p><strong>Score:</strong> {post.score}</p>
+              <p><strong>Comments:</strong> {post.comments}</p>
+              <p><strong>Stored at:</strong> {post.stored_at}</p>
+              {post.permalink && (
+                <a
+                  href={`https://www.reddit.com${post.permalink}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open post
+                </a>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
