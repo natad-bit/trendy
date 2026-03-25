@@ -1,5 +1,27 @@
 import { useState } from "react";
 
+const Comment = ({ comment }) => {
+  let sentimentEmoji = "⚪";
+  if (comment.sentiment > 0) sentimentEmoji = "🟢";
+  else if (comment.sentiment < 0) sentimentEmoji = "🔴";
+
+  return (
+    <div style={{ marginBottom: 10, borderLeft: "2px solid #ddd", paddingLeft: 12, marginTop: 10, marginLeft: 5 }}>
+      <strong>{comment.author}</strong> <span style={{ color: "#555", fontSize: "0.9em" }}>(Score: {comment.score})</span>
+      <span style={{ marginLeft: 10, fontSize: "0.9em" }}>
+        Sentiment: {comment.sentiment} {sentimentEmoji}
+      </span>
+      <p style={{ margin: "5px 0" }}>{comment.body}</p>
+      
+      {comment.replies && comment.replies.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          {comment.replies.map(r => <Comment key={r.id} comment={r} />)}
+        </div>
+      )}
+    </div>
+  );
+};
+
 function App() {
   const [subreddit, setSubreddit] = useState("programming");
   const [data, setData] = useState(null);
@@ -85,6 +107,15 @@ function App() {
               <p>Author: {post.author}</p>
               <p>Score: {post.score}</p>
               <p>Comments: {post.numComments}</p>
+              {post.analyzedCommentsCount > 0 && (
+                <p style={{ margin: "5px 0" }}>
+                  <strong>Avg Sentiment:</strong> {post.averageSentiment}{" "}
+                  {post.averageSentiment > 0 ? "🟢" : post.averageSentiment < 0 ? "🔴" : "⚪"}
+                  <span style={{ fontSize: "0.8em", color: "#666", marginLeft: 8 }}>
+                    ({post.analyzedCommentsCount} comments analyzed)
+                  </span>
+                </p>
+              )}
 
               {expandedPostId === post.id && (
                 <div
@@ -97,12 +128,7 @@ function App() {
                   {!loadingComments && !commentsError && comments.length === 0 && (
                     <p>No comments found.</p>
                   )}
-                  {!loadingComments && comments.length > 0 && comments.map(c => (
-                    <div key={c.id} style={{ marginBottom: 10, borderBottom: "1px solid #ccc", paddingBottom: 10 }}>
-                      <strong>{c.author}</strong> <span style={{ color: "#555", fontSize: "0.9em" }}>(Score: {c.score})</span>
-                      <p style={{ margin: "5px 0" }}>{c.body}</p>
-                    </div>
-                  ))}
+                  {!loadingComments && comments.length > 0 && comments.map(c => <Comment key={c.id} comment={c} />)}
                 </div>
               )}
             </div>
