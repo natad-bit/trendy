@@ -83,6 +83,58 @@ app.get("/api/reddit/:subreddit", async (req, res) => {
   }
 });
 
+app.get("/api/reddit/:subreddit/comments", async (req, res) => {
+  const subreddit = req.params.subreddit;
+  const postId = req.query.postId;
+
+  if (!postId) {
+    return res.status(400).json({ error: "Post ID is required" });
+  }
+
+  try {
+    const url = `https://www.reddit.com/r/${subreddit}/comments/${postId}.json`;
+    const response = await axios.get(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 RedditDashboardTest/1.0",
+        "Accept": "application/json",
+      },
+      timeout: 15000,
+      validateStatus: () => true,
+    });
+
+    if (response.status !== 200) {
+      return res.status(response.status).json({
+        error: "Reddit request failed",
+        redditStatus: response.status,
+      });
+    }
+
+    // Reddit post-specific JSON returns an array: [postData, commentsData]
+    const commentsData = response.data[1]?.data?.children || [];
+
+    const comments = commentsData
+      .filter((item) => item.kind === "t1") // Ensure it's a comment
+      .map((item) => {
+        const c = item.data || {};
+        return {
+          id: c.id,
+          author: c.author,
+          body: c.body,
+          score: c.score,
+          createdUtc: c.created_utc,
+        };
+      });
+
+    return res.json({ comments });
+  } catch (error) {
+    console.error("Comments route error:", error.message);
+    return res.status(500).json({
+      error: "Server failed to fetch Reddit comments",
+      details: error.message,
+    });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
